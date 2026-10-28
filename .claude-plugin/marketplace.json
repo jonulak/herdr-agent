@@ -1,0 +1,12 @@
+{
+  "name": "herdr-agent",
+  "owner": { "name": "jonulak", "url": "https://github.com/jonulak" },
+  "description": "Local marketplace for the herdr-agent plugin.",
+  "plugins": [
+    {
+      "name": "herdr-agent",
+      "source": "./",
+      "description": "Launch, track, close, and resume Claude agents in Herdr tabs."
+    }
+  ]
+}
