@@ -19,7 +19,12 @@ Every command prints JSON. A failure prints `{"error": ...}` and exits 1; relay 
 
 1. **Pick the target.** The default is the repo of the current working directory, with the tab in the current Herdr workspace (`--here`). If the user names a repo, use `--repo <path>` instead, and the script finds the Herdr workspace whose panes sit in that repo, or creates one named after the repo. Pass `--workspace <id>` only when the user names one or the script reports an ambiguous match (then ask the user which one).
 2. **Choose a slug.** 2–4 words, kebab-case, describing the task (`fix-login-redirect`). It must match `[a-z][a-z0-9_-]{0,31}`. It becomes the tab name, the worktree name (`.claude/worktrees/<slug>`), the Herdr agent name and the record key.
-3. **Write the prompt file.** Put the user's instructions **verbatim** in a temporary file, preceded by one context line, e.g. `Context: dispatched from another Claude session via herdr-agent; you are in your own worktree.` Add nothing else: no plans, no rewording.
+3. **Write the prompt file.** Put the user's instructions **verbatim** in a temporary file, preceded by these context lines:
+   ```
+   Context: dispatched from another Claude session via herdr-agent; you are in your own worktree.
+   If this task is complex enough to warrant it (multi-step, design decisions, non-trivial bugs), use the superpowers skills for it. For any UI/UX work, use the impeccable skill.
+   ```
+   Add nothing else: no plans, no rewording.
 4. **Run:**
    ```bash
    herdr_agent.py launch <slug> --here --prompt-file <file>
