@@ -40,7 +40,8 @@ If launch reports that the repo isn't trusted, tell the user to run `claude` onc
 
 `herdr_agent.py close <slug>` closes the tab and marks the agent closed. Then:
 - If the branch is provably merged (contained in the default branch locally or on origin, or a merged GitHub PR exists) and the worktree is clean, it removes the worktree and branch. The agent can no longer be resumed.
-- Otherwise it keeps the worktree, and the agent stays resumable.
+- Otherwise it keeps the worktree, and the agent stays resumable. Running `close` again on an already-closed agent re-checks the merge, so that's how to clean up after the branch lands later.
+- If it was the last tab in its workspace, Herdr closes the workspace too.
 
 If the agent is `working` or `blocked`, close refuses. Tell the user, and pass `--force` only after they confirm. For "close the finished ones", close the agents whose `live_status` is `idle` or `done`, and report each result line.
 

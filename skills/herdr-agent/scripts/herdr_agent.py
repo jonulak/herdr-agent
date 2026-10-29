@@ -310,7 +310,8 @@ def cmd_close(a) -> dict:
     if live and live.get("agent_status") in ("working", "blocked") and not a.force:
         raise Fail(f"{a.slug} is {live['agent_status']}; confirm with the user, then pass --force")
     result = {"closed": a.slug}
-    if live:
+    # Close the tab even if the agent already exited to a shell (e.g. after /exit).
+    if row["tab_id"] and run("herdr", "tab", "get", row["tab_id"], check=False).returncode == 0:
         herdr("tab", "close", row["tab_id"])
     conn.execute("UPDATE agents SET status='closed', closed_at=COALESCE(?, closed_at), close_note=? WHERE slug=?",
                  (now() if row["status"] == "running" else None, "closed via herdr-agent", a.slug))
