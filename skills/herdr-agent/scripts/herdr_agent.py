@@ -217,6 +217,26 @@ def merge_evidence(repo: str, branch: str) -> str | None:
 # --- commands ---------------------------------------------------------------
 
 
+def submit_prompt(slug: str, pane_id: str, text: str) -> None:
+    """Send the prompt and make sure the agent starts on it.
+
+    The typed text sometimes lands without its Enter; herdr reports that as a
+    stall, and pressing Enter again submits what is already in the input box.
+    """
+    p = run("herdr", "agent", "prompt", slug, text, "--wait", "--until", "working", "--until", "blocked",
+            "--timeout", "15000", check=False)
+    if p.returncode == 0:
+        return
+    if "agent_prompt_stalled" not in p.stdout + p.stderr:
+        raise Fail(f"herdr agent prompt failed: {(p.stderr or p.stdout).strip()}")
+    for _ in range(3):
+        run("herdr", "pane", "send-keys", pane_id, "Enter")
+        if run("herdr", "agent", "wait", slug, "--until", "working", "--until", "blocked",
+               "--timeout", "5000", check=False).returncode == 0:
+            return
+    raise Fail(f"{slug} never started on its prompt; check its tab ({pane_id})")
+
+
 def cmd_launch(a) -> dict:
     if not SLUG_RE.match(a.slug):
         raise Fail(f"slug {a.slug!r} must match {SLUG_RE.pattern}")
@@ -258,7 +278,7 @@ def cmd_launch(a) -> dict:
         (a.slug, repo, ws_id, tab_id, pane_id, worktree, branch, session_id, instructions, now()),
     )
     conn.commit()
-    run("herdr", "agent", "prompt", a.slug, instructions)
+    submit_prompt(a.slug, pane_id, instructions)
     return {"launched": a.slug, "repo": repo, "workspace_id": ws_id, "tab_id": tab_id, "pane_id": pane_id,
             "worktree": worktree, "branch": branch, "session_id": session_id}
 
@@ -363,7 +383,7 @@ def cmd_resume(a) -> dict:
     )
     conn.commit()
     if a.prompt_file:
-        run("herdr", "agent", "prompt", a.slug, Path(a.prompt_file).read_text())
+        submit_prompt(a.slug, pane_id, Path(a.prompt_file).read_text())
     return {"resumed": a.slug, "workspace_id": ws_id, "tab_id": tab_id, "pane_id": pane_id}
 
 
