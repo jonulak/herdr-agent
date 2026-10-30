@@ -30,6 +30,7 @@ Every command prints JSON. A failure prints `{"error": ...}` and exits 1; relay 
    herdr_agent.py launch <slug> --here --prompt-file <file>
    herdr_agent.py launch <slug> --repo ~/Developer/<repo> --prompt-file <file>
    ```
+   Add `--model <id>` when the user asks for a specific model (e.g. `--model claude-fable-5-1` for "use fable").
 5. **Report** the tab name, workspace, and branch in one or two lines. Don't wait for or watch the agent; the user's focus stays where it is.
 
 If launch reports that the repo isn't trusted, tell the user to run `claude` once in that repo and accept the trust dialog. Don't accept it for them.

@@ -270,7 +270,7 @@ def cmd_launch(a) -> dict:
 
     session_id = str(uuid.uuid4())
     run("herdr", "agent", "start", a.slug, "--kind", "claude", "--pane", pane_id, "--timeout", START_TIMEOUT_MS,
-        "--", "--worktree", a.slug, "--session-id", session_id, "--name", a.slug)
+        "--", "--worktree", a.slug, "--session-id", session_id, "--name", a.slug, *(["--model", a.model] if a.model else []))
     branch = worktree_branch(repo, worktree)
     conn.execute(
         "INSERT INTO agents (slug, repo_path, workspace_id, tab_id, pane_id, worktree_path, branch, session_id,"
@@ -398,6 +398,7 @@ def main() -> None:
     g.add_argument("--repo", help="any path inside the target repo")
     g.add_argument("--here", action="store_true", help="repo of the cwd; tab in the current Herdr workspace")
     s.add_argument("--workspace", help="explicit Herdr workspace id")
+    s.add_argument("--model", help="Claude model for the agent (passed to claude --model)")
     s.set_defaults(fn=cmd_launch)
 
     s = sub.add_parser("list")
