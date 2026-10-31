@@ -30,7 +30,7 @@ Every command prints JSON. A failure prints `{"error": ...}` and exits 1; relay 
    herdr_agent.py launch <slug> --here --prompt-file <file>
    herdr_agent.py launch <slug> --repo ~/Developer/<repo> --prompt-file <file>
    ```
-   Agents run on Opus by default (`--model opus`). Pass `--model claude-fable-5-1` when the user asks for Fable, and another model only when the user names it. `resume` reuses the agent's launch model.
+   Agents run on Opus by default (`--model opus`). Pass `--model fable` when the user asks for Fable, and another model only when the user names it. `resume` reuses the agent's launch model.
 5. **Report** the tab name, workspace, and branch in one or two lines. Don't wait for or watch the agent; the user's focus stays where it is.
 
 If launch reports that the repo isn't trusted, tell the user to run `claude` once in that repo and accept the trust dialog. Don't accept it for them.
