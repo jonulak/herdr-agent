@@ -23,6 +23,7 @@ from pathlib import Path
 DB_PATH = Path(os.environ.get("HERDR_AGENT_DB", Path.home() / "Developer" / ".herdr-agents.db"))
 SLUG_RE = re.compile(r"^[a-z][a-z0-9_-]{0,31}$")
 START_TIMEOUT_MS = "90000"
+DEFAULT_MODEL = "opus"
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS agents (
@@ -41,7 +42,8 @@ CREATE TABLE IF NOT EXISTS agents (
     close_note          TEXT,
     worktree_removed_at TEXT,
     resume_count        INTEGER NOT NULL DEFAULT 0,
-    last_resumed_at     TEXT
+    last_resumed_at     TEXT,
+    model               TEXT
 );
 """
 
@@ -58,6 +60,8 @@ def db() -> sqlite3.Connection:
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     conn.executescript(SCHEMA)
+    if "model" not in {r[1] for r in conn.execute("PRAGMA table_info(agents)")}:
+        conn.execute("ALTER TABLE agents ADD COLUMN model TEXT")
     return conn
 
 
@@ -270,12 +274,12 @@ def cmd_launch(a) -> dict:
 
     session_id = str(uuid.uuid4())
     run("herdr", "agent", "start", a.slug, "--kind", "claude", "--pane", pane_id, "--timeout", START_TIMEOUT_MS,
-        "--", "--worktree", a.slug, "--session-id", session_id, "--name", a.slug, *(["--model", a.model] if a.model else []))
+        "--", "--worktree", a.slug, "--session-id", session_id, "--name", a.slug, "--model", a.model)
     branch = worktree_branch(repo, worktree)
     conn.execute(
         "INSERT INTO agents (slug, repo_path, workspace_id, tab_id, pane_id, worktree_path, branch, session_id,"
-        " instructions, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
-        (a.slug, repo, ws_id, tab_id, pane_id, worktree, branch, session_id, instructions, now()),
+        " instructions, created_at, model) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+        (a.slug, repo, ws_id, tab_id, pane_id, worktree, branch, session_id, instructions, now(), a.model),
     )
     conn.commit()
     submit_prompt(a.slug, pane_id, instructions)
@@ -375,7 +379,7 @@ def cmd_resume(a) -> dict:
     ws_id = a.workspace or resolve_workspace(row["repo_path"])["workspace_id"]
     ws_id, tab_id, pane_id = open_tab(row["repo_path"], wt, a.slug, ws_id)
     run("herdr", "agent", "start", a.slug, "--kind", "claude", "--pane", pane_id, "--timeout", START_TIMEOUT_MS,
-        "--", "--resume", row["session_id"])
+        "--", "--resume", row["session_id"], "--model", row["model"] or DEFAULT_MODEL)
     conn.execute(
         "UPDATE agents SET status='running', workspace_id=?, tab_id=?, pane_id=?, closed_at=NULL, close_note=NULL,"
         " resume_count=resume_count+1, last_resumed_at=? WHERE slug=?",
@@ -398,7 +402,7 @@ def main() -> None:
     g.add_argument("--repo", help="any path inside the target repo")
     g.add_argument("--here", action="store_true", help="repo of the cwd; tab in the current Herdr workspace")
     s.add_argument("--workspace", help="explicit Herdr workspace id")
-    s.add_argument("--model", help="Claude model for the agent (passed to claude --model)")
+    s.add_argument("--model", default=DEFAULT_MODEL, help="Claude model for the agent (passed to claude --model; default opus)")
     s.set_defaults(fn=cmd_launch)
 
     s = sub.add_parser("list")
