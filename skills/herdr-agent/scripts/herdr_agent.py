@@ -24,6 +24,7 @@ DB_PATH = Path(os.environ.get("HERDR_AGENT_DB", Path.home() / "Developer" / ".he
 SLUG_RE = re.compile(r"^[a-z][a-z0-9_-]{0,31}$")
 START_TIMEOUT_MS = "90000"
 DEFAULT_MODEL = "opus"
+DEFAULT_MODE = "plan"
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS agents (
@@ -274,7 +275,8 @@ def cmd_launch(a) -> dict:
 
     session_id = str(uuid.uuid4())
     run("herdr", "agent", "start", a.slug, "--kind", "claude", "--pane", pane_id, "--timeout", START_TIMEOUT_MS,
-        "--", "--worktree", a.slug, "--session-id", session_id, "--name", a.slug, "--model", a.model)
+        "--", "--worktree", a.slug, "--session-id", session_id, "--name", a.slug, "--model", a.model,
+        "--permission-mode", a.mode)
     branch = worktree_branch(repo, worktree)
     conn.execute(
         "INSERT INTO agents (slug, repo_path, workspace_id, tab_id, pane_id, worktree_path, branch, session_id,"
@@ -402,6 +404,7 @@ def main() -> None:
     g.add_argument("--repo", help="any path inside the target repo")
     g.add_argument("--here", action="store_true", help="repo of the cwd; tab in the current Herdr workspace")
     s.add_argument("--workspace", help="explicit Herdr workspace id")
+    s.add_argument("--mode", default=DEFAULT_MODE, help="claude --permission-mode for the agent (default plan)")
     s.add_argument("--model", default=DEFAULT_MODEL, help="Claude model for the agent (passed to claude --model; default opus)")
     s.set_defaults(fn=cmd_launch)
 
