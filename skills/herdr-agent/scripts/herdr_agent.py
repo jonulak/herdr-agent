@@ -211,11 +211,14 @@ def merge_evidence(repo: str, branch: str) -> str | None:
         git(repo, "fetch", "--quiet", "origin", base, check=False)
         if git(repo, "merge-base", "--is-ancestor", branch, f"origin/{base}", check=False).returncode == 0:
             return f"{branch} is contained in origin/{base}"
-        p = run("gh", "pr", "list", "--head", branch, "--state", "merged", "--json", "number,url",
+        p = run("gh", "pr", "list", "--head", branch, "--state", "merged", "--json", "number,url,headRefOid",
                 cwd=repo, check=False)
-        if p.returncode == 0 and json.loads(p.stdout or "[]"):
-            pr = json.loads(p.stdout)[0]
-            return f"PR #{pr['number']} from {branch} was merged ({pr['url']})"
+        tip = git(repo, "rev-parse", branch).stdout.strip()
+        # Squash merges leave the branch unmerged in git; only trust a PR whose head is the branch tip,
+        # so commits added after the merge are never deleted.
+        for pr in json.loads(p.stdout or "[]") if p.returncode == 0 else []:
+            if pr.get("headRefOid") == tip:
+                return f"PR #{pr['number']} from {branch} was merged ({pr['url']})"
     return None
 
 
@@ -343,28 +346,51 @@ def cmd_close(a) -> dict:
                  (now() if row["status"] == "running" else None, "closed via herdr-agent", a.slug))
     conn.commit()
 
-    wt, branch, repo = row["worktree_path"], row["branch"], row["repo_path"]
-    if row["worktree_removed_at"] or not wt or not Path(wt).exists():
-        result["worktree"] = "already gone"
+    removable, note, branch = worktree_state(conn, row)
+    if not removable:
+        result["worktree"] = note
         return result
-    if not branch:
-        result["worktree"] = "kept: branch unknown"
-        return result
-    dirty = git(wt, "status", "--porcelain").stdout.strip()
-    if dirty:
-        result["worktree"] = "kept: uncommitted changes in worktree (still resumable)"
-        return result
-    evidence = merge_evidence(repo, branch)
-    if not evidence:
-        result["worktree"] = "kept: no merge detected (still resumable)"
-        return result
+    wt, repo = row["worktree_path"], row["repo_path"]
     git(repo, "worktree", "unlock", wt, check=False)
     git(repo, "worktree", "remove", wt)
     git(repo, "branch", "-D", branch)
     conn.execute("UPDATE agents SET worktree_removed_at=? WHERE slug=?", (now(), a.slug))
     conn.commit()
-    result["worktree"] = f"removed worktree and branch {branch}: {evidence}"
+    result["worktree"] = f"removed worktree and branch {branch}: {note}"
     return result
+
+
+def worktree_state(conn: sqlite3.Connection, row: sqlite3.Row) -> tuple[bool, str, str | None]:
+    """(removable, note, branch): removable only when clean and provably merged."""
+    wt, branch, repo = row["worktree_path"], row["branch"], row["repo_path"]
+    if row["worktree_removed_at"] or not wt or not Path(wt).exists():
+        return False, "already gone", branch
+    if not branch:  # launch can record it before claude has created the worktree
+        branch = worktree_branch(repo, wt)
+        if branch:
+            conn.execute("UPDATE agents SET branch=? WHERE slug=?", (branch, row["slug"]))
+            conn.commit()
+    if not branch:
+        return False, "kept: branch unknown", None
+    if git(wt, "status", "--porcelain").stdout.strip():
+        return False, "kept: uncommitted changes in worktree (still resumable)", branch
+    evidence = merge_evidence(repo, branch)
+    if not evidence:
+        return False, "kept: no merge detected (still resumable)", branch
+    return True, evidence, branch
+
+
+def cmd_check(a) -> dict:
+    """Read-only: would `close` be safe, and would it remove the worktree?"""
+    conn = db()
+    reconcile(conn)
+    row = get_row(conn, a.slug)
+    live = live_agent(row)
+    status = live.get("agent_status") if live else None
+    removable, note, branch = worktree_state(conn, row)
+    return {"slug": a.slug, "status": row["status"], "live_status": status,
+            "busy": status in ("working", "blocked"), "worktree_removable": removable, "worktree": note,
+            "branch": branch, "instructions": row["instructions"], "last_message": last_message(row)}
 
 
 def cmd_resume(a) -> dict:
@@ -421,6 +447,10 @@ def main() -> None:
     s.add_argument("slug")
     s.add_argument("--force", action="store_true", help="close even if working/blocked")
     s.set_defaults(fn=cmd_close)
+
+    s = sub.add_parser("check")
+    s.add_argument("slug")
+    s.set_defaults(fn=cmd_check)
 
     s = sub.add_parser("resume")
     s.add_argument("slug")

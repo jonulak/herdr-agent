@@ -50,7 +50,7 @@ If launch reports that the repo isn't trusted, tell the user to run `claude` onc
 - Otherwise it keeps the worktree, and the agent stays resumable. Running `close` again on an already-closed agent re-checks the merge, so that's how to clean up after the branch lands later.
 - If it was the last tab in its workspace, Herdr closes the workspace too.
 
-If the agent is `working` or `blocked`, close refuses. Tell the user, and pass `--force` only after they confirm. For "close the finished ones", close the agents whose `live_status` is `idle` or `done`, and report each result line.
+If the agent is `working` or `blocked`, close refuses. Tell the user, and pass `--force` only after they confirm. For "close the finished ones" or any bulk cleanup, use the `sweep-agents` skill. `herdr_agent.py check <slug>` reports, without changing anything, whether close would remove the worktree.
 
 ## Resume
 
