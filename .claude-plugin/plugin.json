@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "herdr-agent",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Launch Claude agents into their own Herdr tabs with claude --worktree, and track, close, and resume them via a SQLite registry.",
   "author": { "name": "jonulak", "url": "https://github.com/jonulak" },
   "license": "MIT"

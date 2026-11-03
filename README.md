@@ -5,7 +5,7 @@ A Claude Code plugin that hands a task to a fresh Claude agent in its own [Herdr
 - **Launch:** creates a tab named after the task, in the repo's Herdr workspace (or a new workspace if the repo has none). Starts `claude --worktree <slug>` there and sends your instructions word for word.
 - **Track:** records every agent in a SQLite registry (`~/Developer/.herdr-agents.db`, override with `HERDR_AGENT_DB`), so any later session can answer "how's the X agent doing?" from the agent's latest reply.
 - **Close:** closes the tab. It removes the worktree and branch only when it can prove the branch was merged.
-- **Sweep:** the `sweep-agents` skill checks every open agent and closes the ones that are finished, merged, and safe to remove.
+- **Sweep:** the `sweep-agents` skill checks every open agent, shows a report of which are finished, merged, and safe to remove, and closes the ones you confirm.
 - **Resume:** opens a new tab in the kept worktree and runs `claude --resume <session-id>`, restoring the full conversation.
 
 ## Install
