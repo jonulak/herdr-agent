@@ -22,7 +22,7 @@ Every command prints JSON. A failure prints `{"error": ...}` and exits 1; relay 
 3. **Write the prompt file.** Put the user's instructions **verbatim** in a temporary file, preceded by these context lines:
    ```
    Context: dispatched from another Claude session via herdr-agent; you are in your own worktree.
-   If this task is complex enough to warrant it (multi-step, design decisions, non-trivial bugs), use the superpowers skills for it. For any UI/UX work, use the impeccable skill.
+   Use the superpowers skills for this task. For any UI/UX work, also use the impeccable skill.
    ```
    Add nothing else: no plans, no rewording.
 4. **Run:**
