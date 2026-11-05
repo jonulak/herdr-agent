@@ -24,7 +24,10 @@ DB_PATH = Path(os.environ.get("HERDR_AGENT_DB", Path.home() / "Developer" / ".he
 SLUG_RE = re.compile(r"^[a-z][a-z0-9_-]{0,31}$")
 START_TIMEOUT_MS = "90000"
 DEFAULT_MODEL = "opus"
-DEFAULT_MODE = "plan"
+DEFAULT_MODE = "auto"
+# auto mode has no built-in approval step, so the prompt asks for one
+PLAN_GATE = ("Before making any changes, present your plan and wait for my approval."
+             " Read-only exploration is fine before that.\n")
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS agents (
@@ -287,7 +290,7 @@ def cmd_launch(a) -> dict:
         (a.slug, repo, ws_id, tab_id, pane_id, worktree, branch, session_id, instructions, now(), a.model),
     )
     conn.commit()
-    submit_prompt(a.slug, pane_id, instructions)
+    submit_prompt(a.slug, pane_id, (PLAN_GATE if a.mode == "auto" else "") + instructions)
     return {"launched": a.slug, "repo": repo, "workspace_id": ws_id, "tab_id": tab_id, "pane_id": pane_id,
             "worktree": worktree, "branch": branch, "session_id": session_id}
 
@@ -430,7 +433,7 @@ def main() -> None:
     g.add_argument("--repo", help="any path inside the target repo")
     g.add_argument("--here", action="store_true", help="repo of the cwd; tab in the current Herdr workspace")
     s.add_argument("--workspace", help="explicit Herdr workspace id")
-    s.add_argument("--mode", default=DEFAULT_MODE, help="claude --permission-mode for the agent (default plan)")
+    s.add_argument("--mode", default=DEFAULT_MODE, help="claude --permission-mode for the agent (default auto)")
     s.add_argument("--model", default=DEFAULT_MODEL, help="Claude model for the agent (passed to claude --model; default opus)")
     s.set_defaults(fn=cmd_launch)
 
