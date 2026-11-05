@@ -31,7 +31,7 @@ Every command prints JSON. A failure prints `{"error": ...}` and exits 1; relay 
    herdr_agent.py launch <slug> --repo ~/Developer/<repo> --prompt-file <file>
    ```
    Agents run on Opus by default (`--model opus`). Pass `--model fable` when the user asks for Fable, and another model only when the user names it. `resume` reuses the agent's launch model.
-   Agents start in auto mode (`--mode auto`), and the script puts a line ahead of the prompt telling them to present a plan and wait for approval in their tab before changing anything. Pass `--mode <permission-mode>` (e.g. `plan`, `acceptEdits`, `bypassPermissions`) only when the user asks for it, such as "let it just do it". Any mode other than `auto` leaves the approval line out. `resume` doesn't set a mode.
+   Agents start in bypass-permissions mode (`--mode bypassPermissions`, so they never stop for tool approvals), and the script puts a line ahead of the prompt telling them to present a plan and wait for approval in their tab before changing anything. Pass `--mode <permission-mode>` (e.g. `plan`, `acceptEdits`, `auto`) only when the user asks for a different mode. Any mode other than `bypassPermissions` leaves the approval line out. `resume` doesn't set a mode.
 5. **Report** the tab name, workspace, and branch in one or two lines. Don't wait for or watch the agent; the user's focus stays where it is.
 
 If launch reports that the repo isn't trusted, tell the user to run `claude` once in that repo and accept the trust dialog. Don't accept it for them.
